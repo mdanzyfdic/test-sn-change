@@ -1,36 +1,67 @@
-# This is a basic workflow to help you get started with Actions
+name: ServiceNow DevOps - Simplified Change
 
-name: CI
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+env:
+  APP_NAME: hello-world-app
+  DEPLOY_ENV: production
+
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  ServiceNow-Change:
+    name: ServiceNow-Change
     runs-on: ubuntu-latest
+    outputs:
+      change-request-number: ${{ steps.sn-change.outputs.change-request-number }}
+      change-request-sys-id: ${{ steps.sn-change.outputs.change-request-sys-id }}
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
+      # ----------------------------------------------------------------
+      # Create a DevOps Simplified change in ServiceNow, auto-close it,
+      # and populate every supported field from GitHub context.
+      # NOTE: risk, impact, and risk_impact_analysis are NOT supported.
+      # ----------------------------------------------------------------
+      - name: ServiceNow DevOps Simplified Change
+        id: sn-change
+        uses: ServiceNow/servicenow-devops-change@v6.1.0
+        with:
+          devops-integration-token: ${{ secrets.SN_DEVOPS_TOKEN }}
+          instance-url: ${{ secrets.SN_INSTANCE_URL }}
+          tool-id: ${{ secrets.SN_ORCHESTRATION_TOOL_ID }}
+          context-github: ${{ toJSON(github) }}
+          job-name: 'ServiceNow-Change'
+          # setCloseCode:"true" + autoCloseChange:true will auto-close
+          # the change request once the pipeline completes successfully.
+          change-request: |
+            {
+              "setCloseCode": "true",
+              "autoCloseChange": true,
+              "templateName": "DevOps Simplified",
+              "attributes": {
+                "short_description": "Deploy ${{ env.APP_NAME }} #${{ github.run_number }} to ${{ env.DEPLOY_ENV }}",
+                "description": "Automated deployment of ${{ env.APP_NAME }} to ${{ env.DEPLOY_ENV }} triggered by a ${{ github.event_name }} event on ${{ github.ref_name }}. Commit: ${{ github.sha }}. Initiated by ${{ github.actor }}. Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                "justification": "Deploying ${{ env.APP_NAME }} commit ${{ github.sha }} to ${{ env.DEPLOY_ENV }} as part of the standard CI/CD release pipeline. Requested by ${{ github.actor }} via a ${{ github.event_name }} event on branch ${{ github.ref_name }} in ${{ github.repository }}.",
+                "category": "Software",
+                "type": "standard",
+                "priority": "3",
+                "assignment_group": "a715cd759f2002002920bde8132e7018",
+                "cmdb_ci": "${{ env.APP_NAME }}",
+                "implementation_plan": "1. GitHub Actions CI/CD pipeline builds and validates ${{ env.APP_NAME }}. 2. Artifact is automatically deployed to ${{ env.DEPLOY_ENV }} by the pipeline. 3. Post-deployment health checks and smoke tests execute automatically. 4. Deployment status is reported back to this change record.",
+                "backout_plan": "If deployment fails, the pipeline automatically re-deploys the last known-good release of ${{ env.APP_NAME }} to ${{ env.DEPLOY_ENV }}. Manual rollback can also be triggered directly from the GitHub Actions workflow in ${{ github.repository }}.",
+                "test_plan": "Automated smoke tests, health check endpoint verification, and deployment log review are run immediately after deployment. Full test results are available in the GitHub Actions run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+              }
+            }
+          interval: '100'
+          timeout: '3600'
+          changeCreationTimeOut: '3600'
+          abortOnChangeCreationFailure: true
+          abortOnChangeStepTimeout: true
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Output Change Request Details
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          echo "Change Request Number : ${{ steps.sn-change.outputs.change-request-number }}"
+          echo "Change Request Sys ID : ${{ steps.sn-change.outputs.change-request-sys-id }}"
+
+ 
