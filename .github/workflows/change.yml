@@ -1,4 +1,5 @@
-name: ServiceNow DevOps - Simplified Changename: ServiceNow DevOps - Simplified Change
+name: ServiceNow DevOps - Simplified Change
+
 on:
   push:
     branches: [ "main" ]
