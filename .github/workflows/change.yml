@@ -1,68 +1,48 @@
-name: ServiceNow DevOps - Simplified Change
-
+name: Test
 on:
-  push:
-    branches: [ "main" ]
   workflow_dispatch:
-
-env:
-  APP_NAME: hello-world-app
-  DEPLOY_ENV: production
+    
 
 jobs:
-  ServiceNow-Change:
-    name: ServiceNow-Change
-    runs-on: ubuntu-latest
-    outputs:
-      change-request-number: ${{ steps.sn-change.outputs.change-request-number }}
-      change-request-sys-id: ${{ steps.sn-change.outputs.change-request-sys-id }}
 
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+  
     steps:
-      # ----------------------------------------------------------------
-      # Create a DevOps Simplified change in ServiceNow, auto-close it,
-      # and populate every supported field from GitHub context.
-      # NOTE: risk, impact, and risk_impact_analysis are NOT supported.
-      # ----------------------------------------------------------------
-      - name: ServiceNow DevOps Simplified Change
-        id: sn-change
+    - name: Checkout
+      uses: actions/checkout@v2
+    
+  changeApproval:
+    name: ServiceNow Change Approval
+    needs: build
+    runs-on: ubutun-latest
+
+    steps:     
+      - name: ServiceNow Change Approval
         uses: ServiceNow/servicenow-devops-change@v6.1.0
+        id: create
         with:
-          devops-integration-token: ${{ secrets.SN_DEVOPS_TOKEN }}
+          devops-integration-user-name: ${{ secrets.SN_DEVOPS_USER }}
+          devops-integration-user-password: ${{ secrets.SN_DEVOPS_PASSWORD }}
           instance-url: ${{ secrets.SN_INSTANCE_URL }}
           tool-id: ${{ secrets.SN_ORCHESTRATION_TOOL_ID }}
           context-github: ${{ toJSON(github) }}
-          job-name: 'ServiceNow-Change'
-          # setCloseCode:"true" + autoCloseChange:true will auto-close
-          # the change request once the pipeline completes successfully.
-          change-request: |
-            {
-              "setCloseCode": "true",
-              "autoCloseChange": true,
-              "templateName": "DevOps Simplified",
-              "attributes": {
-                "short_description": "Deploy ${{ env.APP_NAME }} #${{ github.run_number }} to ${{ env.DEPLOY_ENV }}",
-                "description": "Automated deployment of ${{ env.APP_NAME }} to ${{ env.DEPLOY_ENV }} triggered by a ${{ github.event_name }} event on ${{ github.ref_name }}. Commit: ${{ github.sha }}. Initiated by ${{ github.actor }}. Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-                "justification": "Deploying ${{ env.APP_NAME }} commit ${{ github.sha }} to ${{ env.DEPLOY_ENV }} as part of the standard CI/CD release pipeline. Requested by ${{ github.actor }} via a ${{ github.event_name }} event on branch ${{ github.ref_name }} in ${{ github.repository }}.",
-                "category": "Software",
-                "type": "standard",
-                "priority": "3",
-                "assignment_group": "a715cd759f2002002920bde8132e7018",
-                "cmdb_ci": "${{ env.APP_NAME }}",
-                "implementation_plan": "1. GitHub Actions CI/CD pipeline builds and validates ${{ env.APP_NAME }}. 2. Artifact is automatically deployed to ${{ env.DEPLOY_ENV }} by the pipeline. 3. Post-deployment health checks and smoke tests execute automatically. 4. Deployment status is reported back to this change record.",
-                "backout_plan": "If deployment fails, the pipeline automatically re-deploys the last known-good release of ${{ env.APP_NAME }} to ${{ env.DEPLOY_ENV }}. Manual rollback can also be triggered directly from the GitHub Actions workflow in ${{ github.repository }}.",
-                "test_plan": "Automated smoke tests, health check endpoint verification, and deployment log review are run immediately after deployment. Full test results are available in the GitHub Actions run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-              }
-            }
-          deployment-gate: '{"environment":"${{ env.DEPLOY_ENV }}","jobName":"ServiceNow-Change"}'
+          job-name: 'ServiceNow Change Approval'
+          change-request: '{"setCloseCode":"true","attributes":{"short_description":"Automated Software Deployment","description":"Automated Software Deployment.","assignment_group":"a715cd759f2002002920bde8132e7018","implementation_plan":"Software update is tested and results can be found in Test Summaries Tab; When the change is approved the implementation happens automated by the CICD pipeline within the change planned start and end time window.","backout_plan":"When software fails in production, the previous software release will be re-deployed.","test_plan":"Testing if the software was successfully deployed"}}'
           interval: '100'
           timeout: '3600'
           changeCreationTimeOut: '3600'
           abortOnChangeCreationFailure: true
           abortOnChangeStepTimeout: true
+      - name: Output of Change Creation
+        run: echo "change-request-number = ${{ steps.create.outputs.change-request-number }} and change-request-sys-id = ${{ steps.create.outputs.change-request-sys-id }} " >> $GITHUB_OUTPUT
+    
+  deploy:
+    name: Deploy
+    needs: changeApproval
+    runs-on: ubutun-latest
 
-      - name: Output Change Request Details
-        run: |
-          echo "Change Request Number : ${{ steps.sn-change.outputs.change-request-number }}"
-          echo "Change Request Sys ID : ${{ steps.sn-change.outputs.change-request-sys-id }}"
-
- 
+    steps:     
+      - name: Run Deployment Script
+        run: echo "Deployment Finished....."
