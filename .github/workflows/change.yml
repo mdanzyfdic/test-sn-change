@@ -30,7 +30,7 @@ jobs:
   deploy:
     name: Deploy
     needs: changeApproval
-    runs-on: ubutun-latest
+    runs-on: ubuntu-latest
 
     steps:     
       - name: Run Deployment Script
