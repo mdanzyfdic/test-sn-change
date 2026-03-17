@@ -40,9 +40,6 @@ jobs:
             {
               "attributes": {
                 "chg_model": {"name": "DevOps Simplified"},
-                "state": "3",
-                "close_code": "successful",
-                "close_notes": "Change successfully completed via automated GitHub Actions pipeline. Approved by: ${{ github.actor }}. Repository: ${{ github.repository }}, Workflow: ${{ github.workflow }}, Run: ${{ github.run_id }}, SHA: ${{ github.sha }}.",
                 "short_description": "GitHub deployment via DevOps action for ${{ github.repository }}",
                 "description": "Automated deployment triggered from GitHub Actions using the ServiceNow DevOps action. Repository=${{ github.repository }}, Workflow=${{ github.workflow }}, Run ID=${{ github.run_id }}, Run Number=${{ github.run_number }}, Actor=${{ github.actor }}, Ref=${{ github.ref_name }}, SHA=${{ github.sha }}",
                 "justification": "Deployment is required to promote validated code to the target environment.",
@@ -67,6 +64,29 @@ jobs:
         run: |
           echo "change-request-number=${{ steps.create_change_devops_action.outputs.change-request-number }}"
           echo "change-request-sys-id=${{ steps.create_change_devops_action.outputs.change-request-sys-id }}"
+
+      - name: Close ServiceNow change request
+        uses: ServiceNow/servicenow-devops-change@v6.3.0
+        with:
+          devops-integration-token: ${{ secrets.SN_DEVOPS_TOKEN }}
+          instance-url: ${{ secrets.SN_INSTANCE_URL }}
+          tool-id: ${{ secrets.SN_ORCHESTRATION_TOOL_ID }}
+          context-github: ${{ toJSON(github) }}
+          job-name: 'Deploy DevOps Action'
+          change-request: >-
+            {
+              "setCloseCode": "true",
+              "attributes": {
+                "state": "3",
+                "close_code": "successful",
+                "close_notes": "Change successfully completed via automated GitHub Actions pipeline. Approved by: ${{ github.actor }}. Repository: ${{ github.repository }}, Workflow: ${{ github.workflow }}, Run: ${{ github.run_id }}, SHA: ${{ github.sha }}."
+              }
+            }
+          interval: '30'
+          timeout: '3600'
+          changeCreationTimeOut: '600'
+          abortOnChangeCreationFailure: true
+          abortOnChangeStepTimeout: true
 
       - name: Print created change from DevOps action
         run: |
