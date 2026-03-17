@@ -39,8 +39,7 @@ jobs:
           change-request: >-
             {
               "attributes": {
-                "chg_model": {"name": "DevOps Simplified"},
-                "state": "-1",
+                "chg_model": {"name": "DevOps"},
                 "short_description": "GitHub deployment via DevOps action for ${{ github.repository }}",
                 "description": "Automated deployment triggered from GitHub Actions using the ServiceNow DevOps action. Repository=${{ github.repository }}, Workflow=${{ github.workflow }}, Run ID=${{ github.run_id }}, Run Number=${{ github.run_number }}, Actor=${{ github.actor }}, Ref=${{ github.ref_name }}, SHA=${{ github.sha }}",
                 "justification": "Deployment is required to promote validated code to the target environment.",
