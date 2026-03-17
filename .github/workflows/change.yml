@@ -45,9 +45,6 @@ jobs:
                 "start_date":"${{ steps.window_devops_action.outputs.start_date }}",
                 "end_date":"${{ steps.window_devops_action.outputs.end_date }}",
                 "requested_by_date":"${{ steps.window_devops_action.outputs.start_date }}",
-                "contact_type":"web",
-                "correlation_id":"devops-action-${{ github.run_id }}",
-                "correlation_display":"DEVOPS ACTION / ${{ github.repository }} / run ${{ github.run_number }}",
                 "work_notes":"Created automatically from GitHub Actions using ServiceNow DevOps action. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
               }
             }
