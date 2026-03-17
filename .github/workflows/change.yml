@@ -1,16 +1,16 @@
-name: SNOW Change - Direct API
+name: SNOW Change - DevOps Action
 
 on:
   workflow_dispatch:
 
 jobs:
-  deploy-direct-api:
-    name: Deploy Direct API
+  deploy-devops-action:
+    name: Deploy DevOps Action
     runs-on: ubuntu-latest
 
     steps:
-      - name: Build time window for direct API
-        id: window_direct_api
+      - name: Build time window for DevOps action
+        id: window_devops_action
         shell: bash
         run: |
           START_DATE="$(date -u '+%Y-%m-%d %H:%M:%S')"
@@ -19,54 +19,51 @@ jobs:
           echo "start_date=$START_DATE" >> "$GITHUB_OUTPUT"
           echo "end_date=$END_DATE" >> "$GITHUB_OUTPUT"
 
-      - name: Create ServiceNow change with direct API
-        id: create_change_direct_api
-        shell: bash
-        env:
-          SN_INSTANCE_URL: ${{ secrets.SN_INSTANCE_URL }}
-          SN_ACCESS_TOKEN: ${{ secrets.SN_DEVOPS_TOKEN }}
-          START_DATE: ${{ steps.window_direct_api.outputs.start_date }}
-          END_DATE: ${{ steps.window_direct_api.outputs.end_date }}
+      - name: Create ServiceNow change with DevOps action
+        id: create_change_devops_action
+        uses: ServiceNow/servicenow-devops-change@v6.3.0
+        with:
+          devops-integration-token: ${{ secrets.SN_DEVOPS_INTEGRATION_TOKEN }}
+          instance-url: ${{ secrets.SN_INSTANCE_URL }}
+          tool-id: ${{ secrets.SN_ORCHESTRATION_TOOL_ID }}
+          context-github: ${{ toJSON(github) }}
+          job-name: 'Deploy DevOps Action'
+          change-request: >-
+            {
+              "setCloseCode":"true",
+              "autoCloseChange":true,
+              "attributes":{
+                "chg_model":{"name":"DevOps Simplified"},
+                "state":"New",
+                "short_description":"GitHub deployment via DevOps action for ${{ github.repository }}",
+                "description":"Automated deployment triggered from GitHub Actions using the ServiceNow DevOps action. Repository=${{ github.repository }}, Workflow=${{ github.workflow }}, Run ID=${{ github.run_id }}, Run Number=${{ github.run_number }}, Actor=${{ github.actor }}, Ref=${{ github.ref_name }}, SHA=${{ github.sha }}",
+                "justification":"Deployment is required to promote validated code to the target environment.",
+                "implementation_plan":"1. Pull approved artifact 2. Deploy application 3. Run smoke checks 4. Validate service health",
+                "backout_plan":"Rollback to previous known-good version and validate service recovery.",
+                "test_plan":"Run automated smoke tests, API health checks, and post-deploy validation.",
+                "category":"Software",
+                "priority":"2",
+                "start_date":"${{ steps.window_devops_action.outputs.start_date }}",
+                "end_date":"${{ steps.window_devops_action.outputs.end_date }}",
+                "requested_by_date":"${{ steps.window_devops_action.outputs.start_date }}",
+                "contact_type":"web",
+                "correlation_id":"devops-action-${{ github.run_id }}",
+                "correlation_display":"DEVOPS ACTION / ${{ github.repository }} / run ${{ github.run_number }}",
+                "work_notes":"Initial workload set to New."
+              }
+            }
+          interval: '30'
+          timeout: '3600'
+          changeCreationTimeOut: '600'
+          abortOnChangeCreationFailure: true
+          abortOnChangeStepTimeout: true
+
+      - name: Debug ServiceNow outputs
         run: |
-          cat > payload.json <<EOF
-          {
-            "chg_model": "DevOps Simplified",
-            "state": "New",
-            "short_description": "GitHub deployment via direct API for ${{ github.repository }}",
-            "description": "Automated deployment triggered from GitHub Actions using the direct ServiceNow Table API. Repository=${{ github.repository }}, Workflow=${{ github.workflow }}, Run ID=${{ github.run_id }}, Run Number=${{ github.run_number }}, Actor=${{ github.actor }}, Ref=${{ github.ref_name }}, SHA=${{ github.sha }}",
-            "justification": "Deployment is required to promote validated code.",
-            "implementation_plan": "Deploy approved artifact and validate health checks.",
-            "backout_plan": "Rollback to previous version.",
-            "test_plan": "Smoke tests and health checks.",
-            "category": "Software",
-            "priority": "2",
-            "assignment_group": "Change Management",
-            "business_service": "Customer Portal",
-            "cmdb_ci": "web-prod-01",
-            "requested_by": "automation.user",
-            "start_date": "$START_DATE",
-            "end_date": "$END_DATE",
-            "work_notes": "Initial workload set to New."
-          }
-          EOF
+          echo "change-request-number=${{ steps.create_change_devops_action.outputs.change-request-number }}"
+          echo "change-request-sys-id=${{ steps.create_change_devops_action.outputs.change-request-sys-id }}"
 
-          RESPONSE=$(curl --silent --show-error --fail \
-            --header "Accept: application/json" \
-            --header "Content-Type: application/json" \
-            --header "Authorization: Bearer SN_DEVOPS_TOKEN" \
-            --request POST \
-            "$SN_INSTANCE_URL/api/now/table/change_request?sysparm_input_display_value=true&sysparm_display_value=all" \
-            --data @payload.json)
-
-          echo "$RESPONSE"
-
-          CHANGE_NUMBER=$(echo "$RESPONSE" | jq -r '.result.number.display_value // .result.number.value // .result.number')
-          CHANGE_SYS_ID=$(echo "$RESPONSE" | jq -r '.result.sys_id.value // .result.sys_id')
-
-          echo "change_number=$CHANGE_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "change_sys_id=$CHANGE_SYS_ID" >> "$GITHUB_OUTPUT"
-
-      - name: Print created change from direct API
+      - name: Print created change from DevOps action
         run: |
-          echo "Change Number: ${{ steps.create_change_direct_api.outputs.change_number }}"
-          echo "Change Sys ID: ${{ steps.create_change_direct_api.outputs.change_sys_id }}"
+          echo "Change Number: ${{ steps.create_change_devops_action.outputs.change-request-number }}"
+          echo "Change Sys ID: ${{ steps.create_change_devops_action.outputs.change-request-sys-id }}"
