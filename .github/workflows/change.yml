@@ -73,7 +73,6 @@ jobs:
                 "end_date": "${{ steps.window_devops_action.outputs.end_date }}",
                 "requested_by_date": "${{ steps.window_devops_action.outputs.start_date }}",
                 "work_notes": "Change approved by GitHub user: ${{ needs.get-approval.outputs.approver }} prior to pipeline execution. Automated deployment initiated via GitHub Actions - bypassing ServiceNow approval workflow.",
-                "approval": "not_requested",
                 "close_code": "successful",
                 "close_notes": "Change successfully completed via automated GitHub Actions pipeline. Approved by: ${{ needs.get-approval.outputs.approver }}. Repository: ${{ github.repository }}, Run: ${{ github.run_id }}, SHA: ${{ github.sha }}."
               }
