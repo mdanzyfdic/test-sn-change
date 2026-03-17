@@ -30,8 +30,6 @@ jobs:
           job-name: 'Deploy DevOps Action'
           change-request: >-
             {
-              "setCloseCode":"true",
-              "autoCloseChange":true,
               "attributes":{
                 "chg_model":{"name":"DevOps Simplified"},
                 "short_description":"GitHub deployment via DevOps action for ${{ github.repository }}",
