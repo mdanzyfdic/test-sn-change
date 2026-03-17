@@ -8,6 +8,8 @@ jobs:
     name: Awaiting Change Approval
     runs-on: ubuntu-latest
     environment: change-approval  # Configure required reviewers on this environment in repo Settings → Environments
+    permissions:
+      actions: read
     outputs:
       approver: ${{ steps.get_approver.outputs.approver }}
 
@@ -57,7 +59,6 @@ jobs:
           job-name: 'Deploy DevOps Action'
           change-request: >-
             {
-              "setCloseCode": "true",
               "autoCloseChange": true,
               "attributes": {
                 "chg_model": {"name": "DevOps Simplified"},
@@ -72,9 +73,7 @@ jobs:
                 "start_date": "${{ steps.window_devops_action.outputs.start_date }}",
                 "end_date": "${{ steps.window_devops_action.outputs.end_date }}",
                 "requested_by_date": "${{ steps.window_devops_action.outputs.start_date }}",
-                "work_notes": "Change approved by GitHub user: ${{ needs.get-approval.outputs.approver }} prior to pipeline execution. Automated deployment initiated via GitHub Actions - bypassing ServiceNow approval workflow.",
-                "close_code": "successful",
-                "close_notes": "Change successfully completed via automated GitHub Actions pipeline. Approved by: ${{ needs.get-approval.outputs.approver }}. Repository: ${{ github.repository }}, Run: ${{ github.run_id }}, SHA: ${{ github.sha }}."
+                "work_notes": "Change approved by GitHub user: ${{ needs.get-approval.outputs.approver }} prior to pipeline execution. Automated deployment initiated via GitHub Actions."
               }
             }
           interval: '30'
@@ -82,6 +81,7 @@ jobs:
           changeCreationTimeOut: '600'
           abortOnChangeCreationFailure: true
           abortOnChangeStepTimeout: true
+          deployment-gate: '{"environment":"production","jobName":"Deploy DevOps Action"}'
 
       - name: Debug ServiceNow outputs
         run: |
