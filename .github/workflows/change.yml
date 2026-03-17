@@ -24,7 +24,7 @@ jobs:
         shell: bash
         env:
           SN_INSTANCE_URL: ${{ secrets.SN_INSTANCE_URL }}
-          SN_ACCESS_TOKEN: ${{ secrets.SN_ACCESS_TOKEN }}
+          SN_ACCESS_TOKEN: ${{ secrets.SN_DEVOPS_TOKEN }}
           START_DATE: ${{ steps.window_direct_api.outputs.start_date }}
           END_DATE: ${{ steps.window_direct_api.outputs.end_date }}
         run: |
@@ -53,7 +53,7 @@ jobs:
           RESPONSE=$(curl --silent --show-error --fail \
             --header "Accept: application/json" \
             --header "Content-Type: application/json" \
-            --header "Authorization: Bearer $SN_ACCESS_TOKEN" \
+            --header "Authorization: Bearer SN_DEVOPS_TOKEN" \
             --request POST \
             "$SN_INSTANCE_URL/api/now/table/change_request?sysparm_input_display_value=true&sysparm_display_value=all" \
             --data @payload.json)
